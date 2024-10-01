@@ -19,16 +19,22 @@ fn main() {
                 CheckResult::Changed
             };
 
-            let after = if let Some(output) = output_glob {
-                check_glob(&output)
+            let (after, out_glob) = if let Some(output) = output_glob {
+                (check_glob(&output), Some(output))
             } else {
-                CheckResult::Changed
+                (CheckResult::Changed, None)
             };
 
             if before == CheckResult::Changed || after == CheckResult::Changed {
                 let tail: &[String] = &args[1..];
                 let mut child = Command::new(cmd).args(tail).spawn().expect("Failed");
-                child.wait().expect("Failed");
+                let result = child.wait();
+                if let Some(out) = out_glob {
+                    match result {
+                        Ok(_) => write_glob(&out),
+                        Err(_) => {}
+                    }
+                }
             }
         }
     }

@@ -35,7 +35,8 @@ impl GlobState {
         fs::write(
             filename,
             serde_json::to_string(self).expect("Failed to write"),
-        );
+        )
+        .expect("Write failed");
     }
 }
 
@@ -77,7 +78,7 @@ fn file_hashes(files: &HashSet<String>) -> HashMap<String, String> {
     result
 }
 
-fn write_glob(output_glob: &str) {
+pub fn write_glob(output_glob: &str) {
     let current_files = file_set(output_glob);
     let hashes = file_hashes(&current_files);
 
