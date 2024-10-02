@@ -1,26 +1,28 @@
-use std::env;
 use std::process::Command;
+use std::{env, io};
 
 use mayberun::*;
 
-fn main() {
+fn main() -> io::Result<()> {
     let input_glob = env::var("IN").ok();
     let output_glob = env::var("OUT").ok();
 
     let args: Vec<String> = env::args().skip(1).collect();
     let head: Option<&String> = args.first();
 
+    let cwd = env::current_dir()?;
+
     match head {
-        None => {}
+        None => (),
         Some(cmd) => {
             let before = if let Some(input) = input_glob {
-                check_glob(&input)
+                check_glob(&env::current_dir().unwrap(), &input)?
             } else {
                 CheckResult::Changed
             };
 
             let (after, out_glob) = if let Some(output) = output_glob {
-                (check_glob(&output), Some(output))
+                (check_glob(&cwd, &output)?, Some(output))
             } else {
                 (CheckResult::Changed, None)
             };
@@ -31,11 +33,12 @@ fn main() {
                 let result = child.wait();
                 if let Some(out) = out_glob {
                     match result {
-                        Ok(_) => write_glob(&out),
-                        Err(_) => {}
+                        Ok(_) => write_glob(&cwd, &out)?,
+                        Err(_) => (),
                     }
                 }
             }
         }
     }
+    Ok(())
 }
