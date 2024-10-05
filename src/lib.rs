@@ -73,7 +73,7 @@ fn file_set(root: &Path, glob: &str) -> io::Result<HashSet<PathBuf>> {
     let glob =
         Glob::new(glob).map_err(|_e| io::Error::new(io::ErrorKind::InvalidInput, "Bad glob"))?;
     let mut result = HashSet::new();
-    for entry in glob.walk(root) {
+    for entry in glob.walk(root.canonicalize()?) {
         result.insert(entry?.into_path());
     }
     Ok(result)
@@ -181,6 +181,43 @@ mod tests {
 
         assert_eq!(CheckResult::Changed, result);
 
+        Ok(())
+    }
+
+    #[test]
+    fn test_file_set() -> io::Result<()> {
+        let test_dir = TempDir::new("tests")?;
+
+        fs::write(
+            &test_dir.path().join(PathBuf::from("test.txt")),
+            "Hello, World",
+        )?;
+
+        let expected: HashSet<PathBuf> = vec![test_dir
+            .path()
+            .canonicalize()?
+            .join(PathBuf::from("test.txt"))]
+        .into_iter()
+        .collect();
+        let result = file_set(&test_dir.path(), "**/*.txt")?;
+        assert_eq!(expected, result);
+        Ok(())
+    }
+
+    #[test]
+    fn test_file_set_dot() -> io::Result<()> {
+        let test_dir = TempDir::new("tests")?;
+
+        fs::write(
+            &test_dir.path().join(PathBuf::from("test.txt")),
+            "Hello, World",
+        )?;
+
+        let expected: HashSet<PathBuf> = vec![PathBuf::from("./src/lib.rs").canonicalize()?]
+            .into_iter()
+            .collect();
+        let result = file_set(&PathBuf::from("."), "src/lib.rs")?;
+        assert_eq!(expected, result);
         Ok(())
     }
 }
